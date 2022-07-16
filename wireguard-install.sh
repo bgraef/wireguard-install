@@ -327,7 +327,7 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 			mkdir -p /etc/wireguard/
 		elif [[ "$os" == "oracle" && "$os_version" -eq 8 ]]; then
 			# Oracle Linux 8
-			dnf install -y oracle-epel-release
+			dnf install -y oracle-epel-release-el8
 			dnf install -y wireguard-tools qrencode $firewall
 			mkdir -p /etc/wireguard/
 		elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
@@ -369,7 +369,7 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 			mkdir -p /etc/wireguard/
 		elif [[ "$os" == "oracle" && "$os_version" -eq 8 ]]; then
 			# Oracle Linux 8
-			dnf install -y oracle-epel-release
+			dnf install -y oracle-epel-release-el8
 			dnf install -y wireguard-tools qrencode ca-certificates tar $cron $firewall
 			mkdir -p /etc/wireguard/
 		elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
