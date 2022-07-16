@@ -31,12 +31,15 @@ elif [[ -e /etc/debian_version ]]; then
 elif [[ -e /etc/almalinux-release || -e /etc/rocky-release || -e /etc/centos-release ]]; then
 	os="centos"
 	os_version=$(grep -shoE '[0-9]+' /etc/almalinux-release /etc/rocky-release /etc/centos-release | head -1)
+elif [[ -e /etc/oracle-release ]]; then
+	os="oracle"
+	os_version=$(grep -shoE '[0-9]+' /etc/oracle-release | head -1)
 elif [[ -e /etc/fedora-release ]]; then
 	os="fedora"
 	os_version=$(grep -oE '[0-9]+' /etc/fedora-release | head -1)
 else
 	echo "This installer seems to be running on an unsupported distribution.
-Supported distros are Ubuntu, Debian, AlmaLinux, Rocky Linux, CentOS and Fedora."
+Supported distros are Ubuntu, Debian, AlmaLinux, Rocky Linux, CentOS, Oracle Linux and Fedora."
 	exit
 fi
 
@@ -55,6 +58,12 @@ fi
 if [[ "$os" == "centos" && "$os_version" -lt 7 ]]; then
 	echo "CentOS 7 or higher is required to use this installer.
 This version of CentOS is too old and unsupported."
+	exit
+fi
+
+if [[ "$os" == "oracle" && "$os_version" -lt 7 ]]; then
+	echo "Oracle Linux 7 or higher is required to use this installer.
+This version of Oracle Linux is too old and unsupported."
 	exit
 fi
 
@@ -260,7 +269,7 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 		done
 		[[ -z "$boringtun_updates" ]] && boringtun_updates="y"
 		if [[ "$boringtun_updates" =~ ^[yY]$ ]]; then
-			if [[ "$os" == "centos" || "$os" == "fedora" ]]; then
+			if [[ "$os" == "centos" || "$os" == "oracle" || "$os" == "fedora" ]]; then
 				cron="cronie"
 			elif [[ "$os" == "debian" || "$os" == "ubuntu" ]]; then
 				cron="cron"
@@ -271,7 +280,7 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 	echo "WireGuard installation is ready to begin."
 	# Install a firewall if firewalld or iptables are not already available
 	if ! systemctl is-active --quiet firewalld.service && ! hash iptables 2>/dev/null; then
-		if [[ "$os" == "centos" || "$os" == "fedora" ]]; then
+		if [[ "$os" == "centos" || "$os" == "oracle" || "$os" == "fedora" ]]; then
 			firewall="firewalld"
 			# We don't want to silently enable firewalld, so we give a subtle warning
 			# If the user continues, firewalld will be installed and enabled during setup
@@ -316,6 +325,11 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 			dnf install -y epel-release elrepo-release
 			dnf install -y kmod-wireguard wireguard-tools qrencode $firewall
 			mkdir -p /etc/wireguard/
+		elif [[ "$os" == "oracle" && "$os_version" -eq 8 ]]; then
+			# Oracle Linux 8
+			dnf install -y oracle-epel-release
+			dnf install -y wireguard-tools qrencode $firewall
+			mkdir -p /etc/wireguard/
 		elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
 			# CentOS 7
 			yum install -y epel-release https://www.elrepo.org/elrepo-release-7.el7.elrepo.noarch.rpm
@@ -353,6 +367,11 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 			dnf install -y epel-release
 			dnf install -y wireguard-tools qrencode ca-certificates tar $cron $firewall
 			mkdir -p /etc/wireguard/
+		elif [[ "$os" == "oracle" && "$os_version" -eq 8 ]]; then
+			# Oracle Linux 8
+			dnf install -y oracle-epel-release
+			dnf install -y wireguard-tools qrencode ca-certificates tar $cron $firewall
+			mkdir -p /etc/wireguard/
 		elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
 			# CentOS 7
 			yum install -y epel-release
@@ -371,7 +390,7 @@ if [[ ! -e /etc/wireguard/wg0.conf ]]; then
 		echo "[Service]
 Environment=WG_QUICK_USERSPACE_IMPLEMENTATION=boringtun
 Environment=WG_SUDO=1" > /etc/systemd/system/wg-quick@wg0.service.d/boringtun.conf
-		if [[ -n "$cron" ]] && [[ "$os" == "centos" || "$os" == "fedora" ]]; then
+		if [[ -n "$cron" ]] && [[ "$os" == "centos" || "$os" == "oracle" || "$os" == "fedora" ]]; then
 			systemctl enable --now crond.service
 		fi
 	fi
@@ -639,6 +658,10 @@ else
 						# CentOS 8
 						dnf remove -y kmod-wireguard wireguard-tools
 						rm -rf /etc/wireguard/
+					elif [[ "$os" == "oracle" && "$os_version" -eq 8 ]]; then
+						# Oracle Linux 8
+						dnf remove -y wireguard-tools
+						rm -rf /etc/wireguard/
 					elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
 						# CentOS 7
 						yum remove -y kmod-wireguard wireguard-tools
@@ -664,6 +687,10 @@ else
 						apt-get remove --purge -y wireguard-tools
 					elif [[ "$os" == "centos" && "$os_version" -eq 8 ]]; then
 						# CentOS 8
+						dnf remove -y wireguard-tools
+						rm -rf /etc/wireguard/
+					elif [[ "$os" == "oracle" && "$os_version" -eq 8 ]]; then
+						# Oracle Linux 8
 						dnf remove -y wireguard-tools
 						rm -rf /etc/wireguard/
 					elif [[ "$os" == "centos" && "$os_version" -eq 7 ]]; then
